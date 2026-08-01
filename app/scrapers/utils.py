@@ -10,38 +10,61 @@ Provides:
 """
 
 import re
-from typing import List
+from typing import List, Optional
+
+# A single, correct email regex used by helpers here. It's intentionally simple
+# and not fully RFC-complete, but works well for typical profile scraping.
+_EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", re.IGNORECASE)
 
 
 def extract_email(text: str) -> str:
-    """Extract first email address from text."""
+    """Extract the first email address from text.
+
+    Returns an empty string if none found. The returned email is stripped of
+    surrounding punctuation and normalized to lower-case to reduce duplicates.
+    """
     if not text:
         return ''
-    pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    matches = re.findall(pattern, text)
-    return matches[0] if matches else ''
+    matches = _EMAIL_PATTERN.findall(text)
+    if not matches:
+        return ''
+    # Normalize and strip common trailing punctuation
+    email = matches[0].strip("'\".,;:()[]{} ")
+    return email.lower()
 
 
 def extract_phone(text: str) -> str:
-    """Extract first phone number (10+ digits) from text."""
+    """Extract the first phone number (10+ digits) from text.
+
+    The function will return a digits-only string, prefixed with '+' if a
+    leading plus sign was present. It aims to be forgiving for different
+    formatting but requires at least 10 digits to consider it a phone.
+    """
     if not text:
         return ''
+
+    # Common phone patterns to capture various formats
     patterns = [
-        r'\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}',
-        r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',
-        r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',
+        r"\+?[\d\s().-]{10,}",
     ]
+
     for pattern in patterns:
         matches = re.findall(pattern, text)
         if matches:
-            phone = re.sub(r'[^\d+]', '', matches[0])
-            if len(phone) >= 10:
-                return phone
+            # Clean the match to digits, keep leading + if present
+            raw = matches[0].strip()
+            leading_plus = raw.startswith('+')
+            digits = re.sub(r'[^0-9]', '', raw)
+            if len(digits) >= 10:
+                return ('+' if leading_plus else '') + digits
+
     return ''
 
 
 def parse_abbreviated_number(s: str) -> int:
     """Parse abbreviated numbers like 11M, 7.5K, 1.2B into integers."""
+    if not s:
+        return 0
     s = s.strip().replace(',', '')
     multipliers = {'K': 1_000, 'M': 1_000_000, 'B': 1_000_000_000}
 
