@@ -94,7 +94,7 @@ def _check_for_updates():
     try:
         import requests as _req
         resp = _req.get(
-            "https://api.github.com/repos/devnsoto/Scout/releases/latest",
+            "https://api.github.com/repos/devnsoto/lead-harvester/releases/latest",
             headers={"Accept": "application/vnd.github.v3+json"},
             timeout=3,
         )
@@ -163,7 +163,7 @@ def enrich_profiles(profiles):
     if not profiles:
         return profiles
 
-    if not Confirm.ask("\n[white][+] Enrich leads with contact info?[/white]", default=True):
+    if not Confirm.ask("\n[+] Enrich leads with contact info?[/white]", default=True):
         return profiles
 
     from app.scrapers.enrichment import LeadEnricher
